@@ -198,20 +198,14 @@ barplot(height = nullTable, space = 0, las = 1, cex.names = 0.8, col = "blue",
 frac6orLess <- sum(results21 <= 6)/length(results21)
 frac6orLess
 #________________________________________PREDICTING_MODELS_______________________________________________________
-# k-fold cross validation
-install.packages('DAAG')
-library(DAAG)
-cvResults <- suppressWarnings(CVlm(model3, form.lm=No_of_Offences~. -1, m=10, dots=FALSE, seed=29, legend.pos="topleft",  printit=FALSE, main="Small symbols are predicted values while bigger ones are actuals."));  # performs the CV
-attr(cvResults, 'ms')
-# editing tools:
-par(mfrow = c(2, 2))  # Split the plotting panel into a 2 x 2 grid
-par(mfrow = c(1, 1))  # Return plotting panel to 1 section
-par
+
 #________________________________LOGISTIC REGRESSION________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
 head(crime)
+
 #the proportion of events and non-events in the Y variable should approximately be the same. 
 #So, lets first check the proportion of classes in the dependent variable No_of_offences.
 table(crime $ No_of_Offences)
+
 #Create Training and Test Samples
 # Create Training Data
 input_ones <- crime[which(crime $ No_of_Offences == 1), ]  # all 1's
@@ -222,18 +216,30 @@ input_zeros_training_rows <- sample(1:nrow(input_zeros), 0.7*nrow(input_zeros)) 
 training_ones <- input_ones[input_ones_training_rows, ]  
 training_zeros <- input_zeros[input_zeros_training_rows, ]
 trainingData <- rbind(training_ones, training_zeros) 
+
 # Create Test Data
 test_ones <- input_ones[-input_ones_training_rows, ]
 test_zeros <- input_zeros[-input_zeros_training_rows, ]
 testData <- rbind(test_ones, test_zeros)  # row bind the 1's and 0's 
+#
+install.packages("smbinning")
+library(smbinning)
+# segregate continuous and factor variables
+continuous_vars  <- c ("No_of_offences", "Live_Register_Num", "Rent_Rates", "Daily_Internet_Users", "Pop_In_Good_Health")
+continuous_vars
+iv_df <- data.frame(VARS=c(continuous_vars), IV=numeric(14))
+
+
 #Build Logit Models and Predict
 logitMod <- glm(No_of_Offences ~  Live_Register_Num + Rent_Rates + Daily_Internet_Users + Pop_In_Good_Health, data=trainingData, family=binomial(link="logit"))
 predicted <- plogis(predict(logitMod, testData))
+
 #tuning the model# predicted scores
 install.packages("InformationValue") 
 library(InformationValue)
 optCutOff <- optimalCutoff(crime $ No_of_Offences, predicted)[1] 
 optCutOff
+
 #Model Diagnostics
 summary(logitMod)
 #VIF
@@ -243,10 +249,12 @@ summary(logitMod)
 install.packages("car")
 library(car)
 vif(logitMod)
+
 #Misclassification Error
 #Misclassification error is the percentage mismatch of predcited vs actuals, 
 #irrespective of 1’s or 0’s. The lower the misclassification error, the better is your model.
 misClassError(crime $ No_of_Offences, predictedScores, threshold = optCutOff)
+
 #ROC
 #Receiver Operating Characteristics
 #install ggplot 2 inroder to use the plotroc function
@@ -254,7 +262,8 @@ library(ggplot2)
 install.packages("plotROC")
 library(plotROC)
 plotROC(No_of_Offences, predicted)
-plotROC
+
+
 #
 install.packages("concordance")
 library(concordance)
@@ -294,6 +303,8 @@ abline(0,1)
 summary(m1)
 plot(m1)
 rms=sqrt((sum((crime$No_of_Offences-predict(m1,data=crime))^2))/length(crime$No_of_Offences))
+par(mfrow = c(2,2))
+plot(m1)
 
 m2=lm(No_of_Offences~. -1,data=model2)
 plot(model2$No_of_Offences,predict(m2,data=model2),xlab="Real Crime", ylab="Predicted Crime")
@@ -301,15 +312,17 @@ abline(0,1)
 summary(m2)
 plot(m2)
 rms=sqrt((sum((crime$No_of_Offences-predict(m2,data=crime))^2))/length(crime$No_of_Offences))
+par(mfrow = c(2,2))
+plot(m2)
 
 m3=lm(No_of_Offences~. -1,data=model3)
 plot(model3$No_of_Offences,predict(m3,data=model3),xlab="Real Crime", ylab="Predicted Crime")
 abline(0,1)
-
 summary(m3)
 plot(m3)
 rms=sqrt((sum((crime$No_of_Offences-predict(m3,data=crime))^2))/length(crime$No_of_Offences))
-
+par(mfrow = c(2,2))
+plot(m3)
 # setting seed to reproduce results of random sampling
 set.seed(100)
 # row indices for training data
@@ -336,5 +349,12 @@ correlation_accuracy
 min_max_accuracy <- mean(apply(actuals_preds, 1, min) / apply(actuals_preds, 1, max))
 min_max_accuracy
 
-plot(crime[5:24])
 
+#___________________________________ k-fold cross validation____________________________________________________
+install.packages("lattice")
+library(lattice)
+install.packages('DAAG')
+library(DAAG)
+cvResults <- suppressWarnings(CVlm(model3, form.lm=No_of_Offences~. -1, m=10, dots=FALSE, seed=29, legend.pos="topleft",  printit=FALSE, main="Small symbols are predicted values while bigger ones are actuals."));  # performs the CV
+attr(cvResults, 'ms')
+#______________________________________________THE END__________________________:)
